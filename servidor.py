@@ -1,30 +1,40 @@
 import socket
 
-HOST = "0.0.0.0"   # Escucha en todas las interfaces de red del equipo
-PORT = 5000        # Puerto (usar >1024); debe ser el mismo en el cliente
+# Configuración del servidor
+# '0.0.0.0' permite escuchar peticiones de cualquier interfaz de red local
+HOST = '0.0.0.0'  
+PORT = 5000       # Puerto donde escuchará (puedes usar cualquier puerto libre > 1024)
 
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as servidor:
-    servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    servidor.bind((HOST, PORT))
-    servidor.listen()
-    print(f"[SERVIDOR] Esperando conexiones en el puerto {PORT}...")
+# Crear el socket TCP/IP
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    conexion, direccion = servidor.accept()
-    with conexion:
-        print(f"[SERVIDOR] Cliente conectado desde {direccion}")
-        while True:
-            datos = conexion.recv(1024)
-            if not datos:  # El cliente cerró la conexión
-                print("[SERVIDOR] Cliente desconectado.")
-                break
+# Enlazar el socket a la dirección y puerto
+server_socket.bind((HOST, PORT))
 
-            mensaje = datos.decode("utf-8")
-            print(f"[CLIENTE] {mensaje}")
+# Poner el servidor en modo escucha (máximo 1 cliente en espera)
+server_socket.listen(1)
+print(f"[*] Servidor escuchando en el puerto {PORT}...")
 
-            if mensaje.lower() == "salir":
-                conexion.sendall("Conexión finalizada.".encode("utf-8"))
-                break
+# Aceptar la conexión entrante
+client_socket, client_address = server_socket.accept()
+print(f"[+] Conexión establecida desde: {client_address}")
 
-            # Respuesta del servidor (aquí puedes poner tu propia lógica)
-            respuesta = f"Servidor recibió: {mensaje}"
-            conexion.sendall(respuesta.encode("utf-8"))
+try:
+    while True:
+        # Recibir mensaje del cliente (hasta 1024 bytes)
+        data = client_socket.recv(1024)
+        if not data:
+            break  # El cliente se desconectó
+        
+        mensaje = data.decode('utf-8')
+        print(f"Cliente: {mensaje}")
+        
+        # Responder al cliente
+        respuesta = f"Servidor recibió: {mensaje}"
+        client_socket.sendall(respuesta.encode('utf-8'))
+
+finally:
+    # Cerrar las conexiones al finalizar
+    client_socket.close()
+    server_socket.close()
+    print("[-] Conexión cerrada.")
